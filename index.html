@@ -3,14 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Google Drive Player</title>
+    <title>DWPLAYER - Advanced Video Player</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --primary-color: #0088cc;
-            --bg-color: #0f0f0f;
-            --secondary-bg: #1a1a1a;
-            --text-color: #ffffff;
+            --yt-red: #ff0000;
+            --yt-dark: #0f0f0f;
+            --yt-gray: #272727;
+            --yt-light-gray: #3f3f3f;
+            --yt-text: #ffffff;
+            --yt-secondary-text: #aaa;
+            --yt-hover: #383838;
         }
         
         * {
@@ -20,92 +23,56 @@
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: var(--bg-color);
-            color: var(--text-color);
+            font-family: 'Roboto', 'Segoe UI', Arial, sans-serif;
+            background: var(--yt-dark);
+            color: var(--yt-text);
             height: 100vh;
             overflow: hidden;
             touch-action: manipulation;
+            user-select: none;
         }
         
-        .container {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-        }
-        
-        .header {
-            padding: 12px 16px;
-            background: var(--secondary-bg);
-            border-bottom: 1px solid #333;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .logo i {
-            color: var(--primary-color);
-        }
-        
-        .title {
-            font-size: 16px;
-            font-weight: 500;
-        }
-        
-        .close-btn {
-            background: #333;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        
-        .player-wrapper {
-            flex: 1;
+        #video-container {
+            width: 100%;
+            height: 100%;
             position: relative;
             background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             overflow: hidden;
         }
         
-        #drive-frame {
+        #video-player {
             width: 100%;
             height: 100%;
-            border: none;
+            object-fit: contain;
+            display: none;
         }
         
+        /* Loading Screen */
         .loading-screen {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: #000;
+            background: var(--yt-dark);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            gap: 20px;
-            z-index: 10;
+            z-index: 1000;
         }
         
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 3px solid #333;
-            border-top: 3px solid var(--primary-color);
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid var(--yt-gray);
+            border-top: 4px solid var(--yt-red);
             border-radius: 50%;
             animation: spin 1s linear infinite;
+            margin-bottom: 20px;
         }
         
         @keyframes spin {
@@ -113,97 +80,138 @@
             100% { transform: rotate(360deg); }
         }
         
-        .loading-text {
-            font-size: 16px;
-            color: #aaa;
-        }
-        
-        .error-screen {
+        /* Controls Container */
+        .controls-container {
             position: absolute;
-            top: 0;
+            bottom: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            background: #000;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 20px;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8));
             padding: 20px;
-            text-align: center;
-            display: none;
-            z-index: 20;
+            padding-bottom: 30px;
+            transition: opacity 0.3s;
+            z-index: 100;
         }
         
-        .error-icon {
-            font-size: 48px;
-            color: #ff6b6b;
+        .controls-container.hidden {
+            opacity: 0;
+            pointer-events: none;
         }
         
-        .error-title {
-            font-size: 20px;
-            font-weight: 600;
-            color: #fff;
-        }
-        
-        .error-message {
-            color: #aaa;
-            font-size: 14px;
-            max-width: 300px;
-            line-height: 1.5;
-        }
-        
-        .retry-btn {
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
+        /* Progress Bar */
+        .progress-container {
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.2);
+            margin-bottom: 15px;
             cursor: pointer;
-            font-size: 14px;
-            margin-top: 10px;
+            position: relative;
         }
         
-        .controls {
-            padding: 12px 16px;
-            background: var(--secondary-bg);
-            border-top: 1px solid #333;
+        .progress-bar {
+            height: 100%;
+            background: var(--yt-red);
+            width: 0%;
+            position: relative;
+        }
+        
+        .progress-handle {
+            position: absolute;
+            right: -6px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 12px;
+            height: 12px;
+            background: var(--yt-red);
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .progress-container:hover .progress-handle {
+            opacity: 1;
+        }
+        
+        .progress-tooltip {
+            position: absolute;
+            bottom: 20px;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            display: none;
+        }
+        
+        /* Main Controls */
+        .main-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .left-controls, .right-controls {
             display: flex;
             align-items: center;
             gap: 15px;
         }
         
         .control-btn {
-            background: #333;
-            color: white;
+            background: transparent;
             border: none;
+            color: var(--yt-text);
+            font-size: 24px;
+            cursor: pointer;
             width: 40px;
             height: 40px;
             border-radius: 50%;
-            cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18px;
+            transition: background 0.2s;
         }
         
-        .control-btn.play {
-            background: var(--primary-color);
+        .control-btn:hover {
+            background: var(--yt-hover);
         }
         
+        .play-btn {
+            background: var(--yt-red);
+            color: white;
+        }
+        
+        .time-display {
+            font-size: 14px;
+            color: var(--yt-text);
+            min-width: 100px;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        /* Volume Control */
         .volume-container {
             display: flex;
             align-items: center;
             gap: 8px;
-            width: 100px;
+            position: relative;
+        }
+        
+        .volume-slider-container {
+            width: 0;
+            overflow: hidden;
+            transition: width 0.3s;
+            height: 20px;
+        }
+        
+        .volume-container:hover .volume-slider-container {
+            width: 80px;
         }
         
         .volume-slider {
             width: 100%;
             height: 4px;
             -webkit-appearance: none;
-            background: #555;
+            background: var(--yt-light-gray);
             border-radius: 2px;
             outline: none;
         }
@@ -212,371 +220,734 @@
             -webkit-appearance: none;
             width: 12px;
             height: 12px;
-            background: var(--primary-color);
+            background: var(--yt-text);
             border-radius: 50%;
             cursor: pointer;
         }
         
-        .time-display {
-            font-size: 14px;
-            color: #aaa;
-            min-width: 100px;
-            text-align: center;
-        }
-        
-        .fullscreen-btn {
-            margin-left: auto;
-        }
-        
-        .info-panel {
+        /* Settings Menu */
+        .settings-menu {
             position: absolute;
             bottom: 80px;
+            right: 20px;
+            background: rgba(0,0,0,0.9);
+            border-radius: 8px;
+            width: 220px;
+            padding: 10px 0;
+            display: none;
+            z-index: 200;
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--yt-gray);
+        }
+        
+        .settings-menu.active {
+            display: block;
+        }
+        
+        .settings-item {
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .settings-item:hover {
+            background: var(--yt-hover);
+        }
+        
+        .settings-item i {
+            margin-right: 10px;
+            width: 20px;
+        }
+        
+        .settings-value {
+            color: var(--yt-secondary-text);
+            font-size: 14px;
+        }
+        
+        .submenu {
+            position: absolute;
+            left: 100%;
+            top: 0;
+            background: rgba(0,0,0,0.9);
+            border-radius: 8px;
+            min-width: 150px;
+            display: none;
+        }
+        
+        .settings-item:hover .submenu {
+            display: block;
+        }
+        
+        /* Playback Speed Menu */
+        .speed-menu {
+            display: none;
+            position: absolute;
+            bottom: 80px;
+            right: 60px;
+            background: rgba(0,0,0,0.9);
+            border-radius: 8px;
+            min-width: 150px;
+            padding: 8px 0;
+        }
+        
+        .speed-option {
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .speed-option:hover, .speed-option.active {
+            background: var(--yt-hover);
+        }
+        
+        /* Quality Menu */
+        .quality-menu {
+            display: none;
+            position: absolute;
+            bottom: 80px;
+            right: 100px;
+            background: rgba(0,0,0,0.9);
+            border-radius: 8px;
+            min-width: 150px;
+            padding: 8px 0;
+        }
+        
+        /* Double Tap Overlay */
+        .double-tap-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 50%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.5);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 50;
+        }
+        
+        .double-tap-overlay.right {
+            left: 50%;
+        }
+        
+        .double-tap-icon {
+            font-size: 48px;
+            color: white;
+            transform: scale(0);
+            transition: transform 0.3s;
+        }
+        
+        /* Captions */
+        .captions-container {
+            position: absolute;
+            bottom: 120px;
             left: 0;
             right: 0;
-            background: rgba(0,0,0,0.8);
-            padding: 15px;
-            margin: 0 15px;
-            border-radius: 10px;
-            font-size: 13px;
-            line-height: 1.5;
-            display: none;
-            z-index: 5;
+            text-align: center;
+            pointer-events: none;
+            z-index: 90;
         }
         
-        .info-panel h4 {
-            margin-bottom: 8px;
-            color: var(--primary-color);
-        }
-        
-        .info-panel ul {
-            padding-left: 20px;
-            color: #ccc;
-        }
-        
-        .info-panel li {
-            margin-bottom: 5px;
-        }
-        
-        .info-btn {
-            position: absolute;
-            top: 15px;
-            right: 60px;
+        .caption-text {
+            display: inline-block;
             background: rgba(0,0,0,0.7);
             color: white;
-            border: none;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            cursor: pointer;
-            z-index: 5;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-size: 18px;
+            max-width: 80%;
+            line-height: 1.4;
         }
         
-        @media (max-width: 480px) {
-            .controls {
-                padding: 10px;
+        /* Top Bar */
+        .top-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 15px 20px;
+            background: linear-gradient(rgba(0,0,0,0.8), transparent);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            transition: opacity 0.3s;
+        }
+        
+        .top-bar.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .player-title {
+            font-size: 16px;
+            font-weight: 500;
+        }
+        
+        .close-btn {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .close-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        /* Mobile Controls */
+        .mobile-controls {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            z-index: 40;
+        }
+        
+        .mobile-left, .mobile-right {
+            flex: 1;
+            height: 100%;
+        }
+        
+        /* Auto Rotation */
+        .rotation-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            z-index: 150;
+        }
+        
+        /* Error Screen */
+        .error-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--yt-dark);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+            z-index: 1000;
+        }
+        
+        .error-icon {
+            font-size: 48px;
+            color: var(--yt-red);
+            margin-bottom: 20px;
+        }
+        
+        /* Fullscreen Styles */
+        :fullscreen #video-container {
+            background: #000;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .controls-container {
+                padding: 15px;
+                padding-bottom: 25px;
             }
             
             .control-btn {
+                font-size: 20px;
                 width: 36px;
                 height: 36px;
-                font-size: 16px;
             }
             
             .time-display {
                 font-size: 12px;
-                min-width: 85px;
+                min-width: 80px;
             }
+            
+            .settings-menu {
+                width: 200px;
+                right: 10px;
+            }
+        }
+        
+        /* Animation for controls show/hide */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="logo">
-                <i class="fab fa-google-drive"></i>
-                <div class="title">Google Drive Player</div>
+    <div id="video-container">
+        <!-- Loading Screen -->
+        <div class="loading-screen" id="loadingScreen">
+            <div class="loading-spinner"></div>
+            <div>Loading DWPLAYER...</div>
+        </div>
+        
+        <!-- Error Screen -->
+        <div class="error-screen" id="errorScreen">
+            <div class="error-icon">
+                <i class="fas fa-exclamation-triangle"></i>
             </div>
-            <button class="close-btn" onclick="window.Telegram.WebApp.close()">
-                <i class="fas fa-times"></i> Close
+            <h2 id="errorTitle">Unable to Load Video</h2>
+            <p id="errorMessage"></p>
+            <button class="control-btn play-btn" onclick="retryLoading()" style="margin-top: 20px;">
+                <i class="fas fa-redo"></i> Retry
             </button>
         </div>
         
-        <div class="player-wrapper">
-            <button class="info-btn" onclick="toggleInfo()">
-                <i class="fas fa-info"></i>
-            </button>
-            
-            <div class="loading-screen" id="loadingScreen">
-                <div class="spinner"></div>
-                <div class="loading-text">Loading Google Drive player...</div>
+        <!-- Video Player -->
+        <video id="video-player" playsinline webkit-playsinline></video>
+        
+        <!-- Double Tap Overlays -->
+        <div class="double-tap-overlay" id="rewindOverlay">
+            <div class="double-tap-icon">
+                <i class="fas fa-backward"></i> -5s
             </div>
-            
-            <div class="error-screen" id="errorScreen">
-                <div class="error-icon">
-                    <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="double-tap-overlay right" id="forwardOverlay">
+            <div class="double-tap-icon">
+                <i class="fas fa-forward"></i> +5s
+            </div>
+        </div>
+        
+        <!-- Mobile Touch Controls -->
+        <div class="mobile-controls">
+            <div class="mobile-left" id="leftTouchArea"></div>
+            <div class="mobile-right" id="rightTouchArea"></div>
+        </div>
+        
+        <!-- Captions Display -->
+        <div class="captions-container" id="captionsContainer"></div>
+        
+        <!-- Rotation Indicator -->
+        <div class="rotation-indicator" id="rotationIndicator">
+            <i class="fas fa-rotate"></i> Auto-rotate enabled
+        </div>
+        
+        <!-- Top Bar -->
+        <div class="top-bar" id="topBar">
+            <div class="player-title">
+                <i class="fab fa-youtube" style="color: var(--yt-red);"></i> DWPLAYER
+            </div>
+            <button class="close-btn" onclick="closePlayer()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <!-- Controls Container -->
+        <div class="controls-container" id="controlsContainer">
+            <!-- Progress Bar -->
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar" id="progressBar">
+                    <div class="progress-handle"></div>
                 </div>
-                <div class="error-title" id="errorTitle">Unable to Load Video</div>
-                <div class="error-message" id="errorMessage"></div>
-                <button class="retry-btn" onclick="retryLoading()">
-                    <i class="fas fa-redo"></i> Try Again
-                </button>
+                <div class="progress-tooltip" id="progressTooltip">00:00</div>
             </div>
             
-            <iframe 
-                id="drive-frame" 
-                allow="autoplay; fullscreen" 
-                allowfullscreen
-                style="display: none;"
-            ></iframe>
-            
-            <div class="info-panel" id="infoPanel">
-                <h4>💡 Player Instructions:</h4>
-                <ul>
-                    <li>Use play/pause button or spacebar</li>
-                    <li>Arrow keys for 10s skip</li>
-                    <li>'F' key for fullscreen</li>
-                    <li>Drag volume slider to adjust</li>
-                    <li>Tap screen to show/hide controls</li>
-                </ul>
-                <p style="margin-top: 10px; color: #888;">
-                    If video doesn't load, make sure the file is shared with "Anyone with the link"
-                </p>
+            <!-- Main Controls -->
+            <div class="main-controls">
+                <div class="left-controls">
+                    <button class="control-btn play-btn" id="playBtn" onclick="togglePlayPause()">
+                        <i class="fas fa-play" id="playIcon"></i>
+                    </button>
+                    
+                    <button class="control-btn" id="rewindBtn" onclick="skipTime(-10)">
+                        <i class="fas fa-backward"></i>
+                    </button>
+                    
+                    <button class="control-btn" id="forwardBtn" onclick="skipTime(10)">
+                        <i class="fas fa-forward"></i>
+                    </button>
+                    
+                    <div class="time-display" id="timeDisplay">
+                        <span id="currentTime">00:00</span> / <span id="duration">00:00</span>
+                    </div>
+                </div>
+                
+                <div class="right-controls">
+                    <div class="volume-container">
+                        <button class="control-btn" id="volumeBtn" onclick="toggleMute()">
+                            <i class="fas fa-volume-up" id="volumeIcon"></i>
+                        </button>
+                        <div class="volume-slider-container">
+                            <input type="range" min="0" max="100" value="100" 
+                                   class="volume-slider" id="volumeSlider">
+                        </div>
+                    </div>
+                    
+                    <button class="control-btn" id="captionsBtn" onclick="toggleCaptions()">
+                        <i class="fas fa-closed-captioning"></i>
+                    </button>
+                    
+                    <button class="control-btn" id="settingsBtn" onclick="toggleSettings()">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                    
+                    <button class="control-btn" id="fullscreenBtn" onclick="toggleFullscreen()">
+                        <i class="fas fa-expand" id="fullscreenIcon"></i>
+                    </button>
+                </div>
             </div>
-        </div>
-        
-        <div class="controls">
-            <button class="control-btn play" id="playBtn" onclick="togglePlayPause()">
-                <i class="fas fa-play" id="playIcon"></i>
-            </button>
             
-            <div class="time-display" id="timeDisplay">00:00 / 00:00</div>
-            
-            <div class="volume-container">
-                <i class="fas fa-volume-up" style="color: #aaa;"></i>
-                <input type="range" min="0" max="100" value="100" class="volume-slider" id="volumeSlider" onchange="changeVolume(this.value)">
+            <!-- Settings Menu -->
+            <div class="settings-menu" id="settingsMenu">
+                <div class="settings-item" onclick="toggleSpeedMenu()">
+                    <div>
+                        <i class="fas fa-tachometer-alt"></i>
+                        Playback Speed
+                    </div>
+                    <div class="settings-value" id="currentSpeed">1x</div>
+                </div>
+                
+                <div class="settings-item" onclick="toggleQualityMenu()">
+                    <div>
+                        <i class="fas fa-hd"></i>
+                        Quality
+                    </div>
+                    <div class="settings-value" id="currentQuality">Auto</div>
+                </div>
+                
+                <div class="settings-item" onclick="toggleCaptions()">
+                    <div>
+                        <i class="fas fa-closed-captioning"></i>
+                        Captions
+                    </div>
+                    <div class="settings-value" id="captionsStatus">OFF</div>
+                </div>
+                
+                <div class="settings-item" onclick="toggleAutoplay()">
+                    <div>
+                        <i class="fas fa-play-circle"></i>
+                        Autoplay
+                    </div>
+                    <div class="settings-value" id="autoplayStatus">ON</div>
+                </div>
+                
+                <div class="settings-item" onclick="toggleAutoRotation()">
+                    <div>
+                        <i class="fas fa-rotate"></i>
+                        Auto-rotate
+                    </div>
+                    <div class="settings-value" id="rotationStatus">ON</div>
+                </div>
+                
+                <div class="settings-item" onclick="toggleLoop()">
+                    <div>
+                        <i class="fas fa-redo"></i>
+                        Loop
+                    </div>
+                    <div class="settings-value" id="loopStatus">OFF</div>
+                </div>
             </div>
             
-            <button class="control-btn fullscreen-btn" onclick="toggleFullscreen()">
-                <i class="fas fa-expand" id="fullscreenIcon"></i>
-            </button>
+            <!-- Playback Speed Menu -->
+            <div class="speed-menu" id="speedMenu">
+                <div class="speed-option" onclick="changeSpeed(0.25)">0.25x</div>
+                <div class="speed-option" onclick="changeSpeed(0.5)">0.5x</div>
+                <div class="speed-option" onclick="changeSpeed(0.75)">0.75x</div>
+                <div class="speed-option active" onclick="changeSpeed(1)">1x (Normal)</div>
+                <div class="speed-option" onclick="changeSpeed(1.25)">1.25x</div>
+                <div class="speed-option" onclick="changeSpeed(1.5)">1.5x</div>
+                <div class="speed-option" onclick="changeSpeed(1.75)">1.75x</div>
+                <div class="speed-option" onclick="changeSpeed(2)">2x</div>
+            </div>
+            
+            <!-- Quality Menu -->
+            <div class="quality-menu" id="qualityMenu">
+                <div class="speed-option active" onclick="changeQuality('auto')">Auto</div>
+                <div class="speed-option" onclick="changeQuality('1080')">1080p</div>
+                <div class="speed-option" onclick="changeQuality('720')">720p</div>
+                <div class="speed-option" onclick="changeQuality('480')">480p</div>
+                <div class="speed-option" onclick="changeQuality('360')">360p</div>
+            </div>
         </div>
     </div>
 
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
-        // Telegram Web App initialization
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        tg.expand();
+        // ==================== GLOBAL VARIABLES ====================
+        let video = document.getElementById('video-player');
+        let loadingScreen = document.getElementById('loadingScreen');
+        let errorScreen = document.getElementById('errorScreen');
+        let controlsContainer = document.getElementById('controlsContainer');
+        let topBar = document.getElementById('topBar');
+        let settingsMenu = document.getElementById('settingsMenu');
+        let speedMenu = document.getElementById('speedMenu');
+        let qualityMenu = document.getElementById('qualityMenu');
+        let rotationIndicator = document.getElementById('rotationIndicator');
+        let captionsContainer = document.getElementById('captionsContainer');
         
-        // Get file ID from URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const fileId = urlParams.get('file_id');
+        // Player state
+        let playerState = {
+            isPlaying: false,
+            isMuted: false,
+            volume: 1,
+            playbackRate: 1,
+            quality: 'auto',
+            captionsEnabled: false,
+            autoplay: true,
+            autoRotation: true,
+            loop: false,
+            isFullscreen: false,
+            controlsVisible: true,
+            lastTapTime: 0,
+            lastTapPosition: {x: 0, y: 0},
+            hideControlsTimeout: null,
+            orientation: window.screen.orientation ? window.screen.orientation.type : 'landscape-primary'
+        };
         
-        // DOM elements
-        const loadingScreen = document.getElementById('loadingScreen');
-        const errorScreen = document.getElementById('errorScreen');
-        const errorTitle = document.getElementById('errorTitle');
-        const errorMessage = document.getElementById('errorMessage');
-        const driveFrame = document.getElementById('drive-frame');
-        const playBtn = document.getElementById('playBtn');
-        const playIcon = document.getElementById('playIcon');
-        const timeDisplay = document.getElementById('timeDisplay');
-        const volumeSlider = document.getElementById('volumeSlider');
-        const infoPanel = document.getElementById('infoPanel');
+        // ==================== INITIALIZATION ====================
         
-        // Video state
-        let isPlaying = false;
-        let playerReady = false;
-        
-        // Google Drive embed URL
-        const embedUrl = `https://drive.google.com/file/d/${fileId}/preview`;
-        
-        // Initialize player
         function initPlayer() {
+            // Initialize Telegram Web App
+            if (window.Telegram && window.Telegram.WebApp) {
+                Telegram.WebApp.ready();
+                Telegram.WebApp.expand();
+            }
+            
+            // Get file ID from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const fileId = urlParams.get('file_id');
+            
             if (!fileId) {
                 showError('No File ID', 'Please provide a valid Google Drive file ID.');
                 return;
             }
             
-            console.log('Loading Google Drive embed:', embedUrl);
+            // Try multiple Google Drive URLs
+            const videoUrls = [
+                `https://drive.google.com/uc?export=download&id=${fileId}`,
+                `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+                `https://docs.google.com/uc?export=download&id=${fileId}`
+            ];
             
-            // Set iframe source
-            driveFrame.src = embedUrl;
+            loadVideo(videoUrls, 0);
             
-            // Hide iframe initially
-            driveFrame.style.display = 'none';
+            // Setup event listeners
+            setupEventListeners();
+            setupTouchControls();
+            setupKeyboardControls();
             
-            // Wait for iframe to load
-            driveFrame.onload = function() {
-                setTimeout(() => {
-                    loadingScreen.style.display = 'none';
-                    driveFrame.style.display = 'block';
-                    playerReady = true;
-                    
-                    // Inject keyboard controls into iframe
-                    injectControls();
-                    
-                    // Start checking if video is loaded
-                    checkVideoLoad();
-                }, 2000);
-            };
-            
-            driveFrame.onerror = function() {
-                showError('Load Failed', 'Could not load Google Drive player. The file might not exist or is not accessible.');
-            };
-            
-            // Timeout in case loading takes too long
-            setTimeout(() => {
-                if (loadingScreen.style.display !== 'none') {
-                    showError('Timeout', 'Taking too long to load. Try again or check your internet connection.');
-                }
-            }, 15000);
+            // Start hide controls timer
+            startHideControlsTimer();
         }
         
-        // Check if video is actually loaded in iframe
-        function checkVideoLoad() {
-            const checkInterval = setInterval(() => {
-                try {
-                    const iframeDoc = driveFrame.contentDocument || driveFrame.contentWindow.document;
-                    const videoElements = iframeDoc.getElementsByTagName('video');
+        function loadVideo(urls, index) {
+            if (index >= urls.length) {
+                showError('Load Failed', 'Could not load video from Google Drive. Please check sharing permissions.');
+                return;
+            }
+            
+            video.src = urls[index];
+            video.load();
+            
+            video.oncanplay = function() {
+                loadingScreen.style.display = 'none';
+                video.style.display = 'block';
+                video.play().then(() => {
+                    playerState.isPlaying = true;
+                    updatePlayButton();
+                }).catch(e => {
+                    console.log('Autoplay blocked:', e);
+                    playerState.isPlaying = false;
+                    updatePlayButton();
+                });
+            };
+            
+            video.onerror = function() {
+                console.log('Failed with URL:', urls[index]);
+                loadVideo(urls, index + 1);
+            };
+        }
+        
+        // ==================== EVENT LISTENERS ====================
+        
+        function setupEventListeners() {
+            // Video events
+            video.addEventListener('timeupdate', updateProgress);
+            video.addEventListener('durationchange', updateDuration);
+            video.addEventListener('volumechange', updateVolumeUI);
+            video.addEventListener('ratechange', updateSpeedUI);
+            video.addEventListener('ended', onVideoEnd);
+            video.addEventListener('waiting', showBuffering);
+            video.addEventListener('playing', hideBuffering);
+            
+            // Progress bar
+            const progressContainer = document.getElementById('progressContainer');
+            progressContainer.addEventListener('click', seekVideo);
+            progressContainer.addEventListener('mousemove', showProgressTooltip);
+            progressContainer.addEventListener('mouseleave', hideProgressTooltip);
+            
+            // Volume slider
+            const volumeSlider = document.getElementById('volumeSlider');
+            volumeSlider.addEventListener('input', changeVolume);
+            
+            // Click to show/hide controls
+            video.addEventListener('click', toggleControlsVisibility);
+            
+            // Fullscreen change
+            document.addEventListener('fullscreenchange', handleFullscreenChange);
+            document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+            
+            // Screen orientation
+            if (window.screen.orientation) {
+                window.screen.orientation.addEventListener('change', handleOrientationChange);
+            }
+            
+            // Resize
+            window.addEventListener('resize', handleResize);
+            
+            // Hide controls when mouse moves
+            document.addEventListener('mousemove', showControlsTemporarily);
+            document.addEventListener('touchstart', showControlsTemporarily);
+        }
+        
+        function setupTouchControls() {
+            const leftTouch = document.getElementById('leftTouchArea');
+            const rightTouch = document.getElementById('rightTouchArea');
+            const rewindOverlay = document.getElementById('rewindOverlay');
+            const forwardOverlay = document.getElementById('forwardOverlay');
+            
+            let touchStartTime = 0;
+            let touchStartX = 0;
+            let touchStartY = 0;
+            
+            leftTouch.addEventListener('touchstart', (e) => {
+                touchStartTime = Date.now();
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+            });
+            
+            leftTouch.addEventListener('touchend', (e) => {
+                const touchEndTime = Date.now();
+                const touchDuration = touchEndTime - touchStartTime;
+                
+                if (touchDuration < 300) { // Double tap detection
+                    const timeSinceLastTap = Date.now() - playerState.lastTapTime;
+                    const distance = Math.sqrt(
+                        Math.pow(e.changedTouches[0].clientX - playerState.lastTapPosition.x, 2) +
+                        Math.pow(e.changedTouches[0].clientY - playerState.lastTapPosition.y, 2)
+                    );
                     
-                    if (videoElements.length > 0) {
-                        console.log('Video element found in iframe');
-                        setupVideoControls(videoElements[0]);
-                        clearInterval(checkInterval);
+                    if (timeSinceLastTap < 300 && distance < 50) {
+                        // Double tap detected
+                        skipTime(-5);
+                        showDoubleTapAnimation(rewindOverlay);
                     }
-                } catch (e) {
-                    // Cross-origin error, use fallback controls
-                    console.log('Using fallback controls');
-                    setupFallbackControls();
-                    clearInterval(checkInterval);
+                    
+                    playerState.lastTapTime = Date.now();
+                    playerState.lastTapPosition = {
+                        x: e.changedTouches[0].clientX,
+                        y: e.changedTouches[0].clientY
+                    };
+                } else {
+                    // Single tap - show/hide controls
+                    toggleControlsVisibility();
                 }
-            }, 1000);
-        }
-        
-        // Setup video controls when video is detected
-        function setupVideoControls(video) {
-            video.controls = false;
-            video.autoplay = false;
-            
-            // Update play button based on video state
-            video.addEventListener('play', () => {
-                isPlaying = true;
-                playIcon.className = 'fas fa-pause';
             });
             
-            video.addEventListener('pause', () => {
-                isPlaying = false;
-                playIcon.className = 'fas fa-play';
+            rightTouch.addEventListener('touchstart', (e) => {
+                touchStartTime = Date.now();
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
             });
             
-            // Update time display
-            video.addEventListener('timeupdate', () => {
-                const currentTime = formatTime(video.currentTime);
-                const duration = formatTime(video.duration || 0);
-                timeDisplay.textContent = `${currentTime} / ${duration}`;
+            rightTouch.addEventListener('touchend', (e) => {
+                const touchEndTime = Date.now();
+                const touchDuration = touchEndTime - touchStartTime;
+                
+                if (touchDuration < 300) {
+                    const timeSinceLastTap = Date.now() - playerState.lastTapTime;
+                    const distance = Math.sqrt(
+                        Math.pow(e.changedTouches[0].clientX - playerState.lastTapPosition.x, 2) +
+                        Math.pow(e.changedTouches[0].clientY - playerState.lastTapPosition.y, 2)
+                    );
+                    
+                    if (timeSinceLastTap < 300 && distance < 50) {
+                        skipTime(5);
+                        showDoubleTapAnimation(forwardOverlay);
+                    }
+                    
+                    playerState.lastTapTime = Date.now();
+                    playerState.lastTapPosition = {
+                        x: e.changedTouches[0].clientX,
+                        y: e.changedTouches[0].clientY
+                    };
+                } else {
+                    toggleControlsVisibility();
+                }
             });
             
-            // Handle volume
-            video.volume = volumeSlider.value / 100;
-        }
-        
-        // Fallback controls when we can't access iframe internals
-        function setupFallbackControls() {
-            // These will control the iframe via postMessage if possible
-            console.log('Using fallback controls for Google Drive');
-        }
-        
-        // Toggle play/pause
-        function togglePlayPause() {
-            if (!playerReady) return;
+            // Touch move for volume/brightness control
+            let isHorizontalSwipe = false;
+            let touchMoveStartX = 0;
+            let touchMoveStartY = 0;
             
-            try {
-                const iframeWindow = driveFrame.contentWindow;
-                
-                // Try to send play/pause command to iframe
-                iframeWindow.postMessage({
-                    action: isPlaying ? 'pause' : 'play'
-                }, '*');
-                
-                isPlaying = !isPlaying;
-                playIcon.className = isPlaying ? 'fas fa-pause' : 'fas fa-play';
-                
-            } catch (e) {
-                console.log('Could not control iframe directly');
-                
-                // Fallback: Toggle play state UI only
-                isPlaying = !isPlaying;
-                playIcon.className = isPlaying ? 'fas fa-pause' : 'fas fa-play';
-            }
-        }
-        
-        // Change volume
-        function changeVolume(value) {
-            try {
-                const iframeWindow = driveFrame.contentWindow;
-                iframeWindow.postMessage({
-                    action: 'volume',
-                    value: value / 100
-                }, '*');
-            } catch (e) {
-                console.log('Could not change volume');
-            }
-        }
-        
-        // Toggle fullscreen
-        function toggleFullscreen() {
-            if (!document.fullscreenElement) {
-                document.querySelector('.container').requestFullscreen()
-                    .then(() => {
-                        document.getElementById('fullscreenIcon').className = 'fas fa-compress';
-                    });
-            } else {
-                document.exitFullscreen()
-                    .then(() => {
-                        document.getElementById('fullscreenIcon').className = 'fas fa-expand';
-                    });
-            }
-        }
-        
-        // Show error message
-        function showError(title, message) {
-            loadingScreen.style.display = 'none';
-            errorTitle.textContent = title;
-            errorMessage.textContent = message;
-            errorScreen.style.display = 'flex';
-        }
-        
-        // Retry loading
-        function retryLoading() {
-            errorScreen.style.display = 'none';
-            loadingScreen.style.display = 'flex';
-            initPlayer();
-        }
-        
-        // Toggle info panel
-        function toggleInfo() {
-            infoPanel.style.display = infoPanel.style.display === 'block' ? 'none' : 'block';
+            document.addEventListener('touchstart', (e) => {
+                touchMoveStartX = e.touches[0].clientX;
+                touchMoveStartY = e.touches[0].clientY;
+                isHorizontalSwipe = false;
+            });
             
-            if (infoPanel.style.display === 'block') {
-                setTimeout(() => {
-                    infoPanel.style.display = 'none';
-                }, 5000);
-            }
+            document.addEventListener('touchmove', (e) => {
+                if (!playerState.controlsVisible) return;
+                
+                const touchX = e.touches[0].clientX;
+                const touchY = e.touches[0].clientY;
+                const deltaX = touchX - touchMoveStartX;
+                const deltaY = touchY - touchMoveStartY;
+                
+                if (Math.abs(deltaX) > 20 && !isHorizontalSwipe) {
+                    isHorizontalSwipe = true;
+                    const isLeftSide = touchX < window.innerWidth / 2;
+                    
+                    if (isLeftSide) {
+                        // Adjust brightness (placeholder - would need special permissions)
+                        console.log('Brightness adjustment:', deltaX);
+                    } else {
+                        // Adjust volume
+                        const volumeChange = deltaX / window.innerWidth;
+                        const newVolume = Math.max(0, Math.min(1, playerState.volume + volumeChange));
+                        changeVolume(newVolume * 100);
+                    }
+                    
+                    touchMoveStartX = touchX;
+                    touchMoveStartY = touchY;
+                }
+            });
         }
         
-        // Format time (seconds to MM:SS)
-        function formatTime(seconds) {
-            if (isNaN(seconds)) return '00:00';
-            const mins = Math.floor(seconds / 60);
-            const secs = Math.floor(seconds % 60);
-            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-        }
-        
-        // Inject keyboard controls
-        function injectControls() {
+        function setupKeyboardControls() {
             document.addEventListener('keydown', (e) => {
+                if (e.target.tagName === 'INPUT') return;
+                
                 switch(e.key.toLowerCase()) {
                     case ' ':
                     case 'k':
@@ -585,39 +956,472 @@
                         break;
                     case 'arrowleft':
                         e.preventDefault();
-                        // Skip back 10 seconds
+                        skipTime(-5);
                         break;
                     case 'arrowright':
                         e.preventDefault();
-                        // Skip forward 10 seconds
+                        skipTime(5);
+                        break;
+                    case 'j':
+                        e.preventDefault();
+                        skipTime(-10);
+                        break;
+                    case 'l':
+                        e.preventDefault();
+                        skipTime(10);
                         break;
                     case 'f':
                         e.preventDefault();
                         toggleFullscreen();
                         break;
-                    case 'i':
+                    case 'm':
                         e.preventDefault();
-                        toggleInfo();
+                        toggleMute();
+                        break;
+                    case 'c':
+                        e.preventDefault();
+                        toggleCaptions();
+                        break;
+                    case '>':
+                    case '.':
+                        e.preventDefault();
+                        changeSpeed(playerState.playbackRate + 0.25);
+                        break;
+                    case '<':
+                    case ',':
+                        e.preventDefault();
+                        changeSpeed(playerState.playbackRate - 0.25);
+                        break;
+                    case '0':
+                    case '1':
+                    case '2':
+                    case '3':
+                    case '4':
+                    case '5':
+                    case '6':
+                    case '7':
+                    case '8':
+                    case '9':
+                        e.preventDefault();
+                        const percentage = parseInt(e.key) / 9;
+                        video.currentTime = video.duration * percentage;
+                        break;
+                    case 'escape':
+                        if (playerState.isFullscreen) {
+                            toggleFullscreen();
+                        }
                         break;
                 }
             });
         }
         
-        // Initialize when page loads
-        document.addEventListener('DOMContentLoaded', initPlayer);
+        // ==================== PLAYBACK CONTROLS ====================
         
-        // Close info panel when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!infoPanel.contains(e.target) && !e.target.classList.contains('info-btn')) {
-                infoPanel.style.display = 'none';
+        function togglePlayPause() {
+            if (video.paused) {
+                video.play();
+                playerState.isPlaying = true;
+            } else {
+                video.pause();
+                playerState.isPlaying = false;
             }
-        });
+            updatePlayButton();
+        }
         
-        // Fullscreen change listener
-        document.addEventListener('fullscreenchange', () => {
+        function skipTime(seconds) {
+            video.currentTime += seconds;
+            showSkipAnimation(seconds > 0);
+        }
+        
+        function seekVideo(e) {
+            const rect = e.target.getBoundingClientRect();
+            const pos = (e.clientX - rect.left) / rect.width;
+            video.currentTime = pos * video.duration;
+        }
+        
+        function changeSpeed(speed) {
+            speed = Math.max(0.25, Math.min(4, speed));
+            video.playbackRate = speed;
+            playerState.playbackRate = speed;
+            updateSpeedUI();
+            hideSettingsMenus();
+        }
+        
+        function changeVolume(value) {
+            if (typeof value === 'object') {
+                value = value.target.value;
+            }
+            
+            playerState.volume = value / 100;
+            video.volume = playerState.volume;
+            
+            if (value == 0) {
+                playerState.isMuted = true;
+            } else if (playerState.isMuted) {
+                playerState.isMuted = false;
+            }
+            
+            updateVolumeUI();
+        }
+        
+        function toggleMute() {
+            playerState.isMuted = !playerState.isMuted;
+            video.muted = playerState.isMuted;
+            updateVolumeUI();
+        }
+        
+        function toggleCaptions() {
+            playerState.captionsEnabled = !playerState.captionsEnabled;
+            // Note: Actual caption support requires WebVTT files
+            // This is a placeholder for future implementation
+            document.getElementById('captionsStatus').textContent = 
+                playerState.captionsEnabled ? 'ON' : 'OFF';
+            
+            if (playerState.captionsEnabled) {
+                showNotification('Captions enabled (placeholder)');
+            }
+            hideSettingsMenus();
+        }
+        
+        function toggleAutoplay() {
+            playerState.autoplay = !playerState.autoplay;
+            video.autoplay = playerState.autoplay;
+            document.getElementById('autoplayStatus').textContent = 
+                playerState.autoplay ? 'ON' : 'OFF';
+            hideSettingsMenus();
+        }
+        
+        function toggleAutoRotation() {
+            playerState.autoRotation = !playerState.autoRotation;
+            document.getElementById('rotationStatus').textContent = 
+                playerState.autoRotation ? 'ON' : 'OFF';
+            
+            if (playerState.autoRotation) {
+                showRotationIndicator();
+            }
+            hideSettingsMenus();
+        }
+        
+        function toggleLoop() {
+            playerState.loop = !playerState.loop;
+            video.loop = playerState.loop;
+            document.getElementById('loopStatus').textContent = 
+                playerState.loop ? 'ON' : 'OFF';
+            hideSettingsMenus();
+        }
+        
+        function changeQuality(quality) {
+            playerState.quality = quality;
+            document.getElementById('currentQuality').textContent = 
+                quality === 'auto' ? 'Auto' : quality + 'p';
+            
+            // Note: Quality switching requires different video sources
+            // This is a placeholder for future implementation
+            showNotification('Quality changed to ' + (quality === 'auto' ? 'Auto' : quality + 'p'));
+            hideSettingsMenus();
+        }
+        
+        // ==================== UI UPDATES ====================
+        
+        function updatePlayButton() {
+            const playIcon = document.getElementById('playIcon');
+            playIcon.className = playerState.isPlaying ? 'fas fa-pause' : 'fas fa-play';
+        }
+        
+        function updateProgress() {
+            const progress = (video.currentTime / video.duration) * 100 || 0;
+            document.getElementById('progressBar').style.width = `${progress}%`;
+            
+            document.getElementById('currentTime').textContent = formatTime(video.currentTime);
+            
+            // Update buffered progress
+            updateBufferProgress();
+        }
+        
+        function updateDuration() {
+            document.getElementById('duration').textContent = formatTime(video.duration);
+        }
+        
+        function updateVolumeUI() {
+            const volumeIcon = document.getElementById('volumeIcon');
+            const volumeSlider = document.getElementById('volumeSlider');
+            
+            if (playerState.isMuted || video.volume === 0) {
+                volumeIcon.className = 'fas fa-volume-mute';
+                volumeSlider.value = 0;
+            } else if (video.volume < 0.5) {
+                volumeIcon.className = 'fas fa-volume-down';
+                volumeSlider.value = video.volume * 100;
+            } else {
+                volumeIcon.className = 'fas fa-volume-up';
+                volumeSlider.value = video.volume * 100;
+            }
+        }
+        
+        function updateSpeedUI() {
+            document.getElementById('currentSpeed').textContent = 
+                `${video.playbackRate}x`;
+            
+            // Update active speed in menu
+            document.querySelectorAll('.speed-option').forEach(option => {
+                option.classList.remove('active');
+                if (parseFloat(option.textContent) === video.playbackRate) {
+                    option.classList.add('active');
+                }
+            });
+        }
+        
+        function updateBufferProgress() {
+            // This would show buffered portions on progress bar
+            // Implementation depends on specific requirements
+        }
+        
+        // ==================== ANIMATIONS & EFFECTS ====================
+        
+        function showDoubleTapAnimation(overlay) {
+            overlay.style.opacity = '1';
+            overlay.querySelector('.double-tap-icon').style.transform = 'scale(1)';
+            
+            setTimeout(() => {
+                overlay.style.opacity = '0';
+                overlay.querySelector('.double-tap-icon').style.transform = 'scale(0)';
+            }, 500);
+        }
+        
+        function showSkipAnimation(isForward) {
+            const overlay = isForward ? 
+                document.getElementById('forwardOverlay') : 
+                document.getElementById('rewindOverlay');
+            
+            showDoubleTapAnimation(overlay);
+        }
+        
+        function showRotationIndicator() {
+            rotationIndicator.style.display = 'flex';
+            setTimeout(() => {
+                rotationIndicator.style.display = 'none';
+            }, 2000);
+        }
+        
+        function showNotification(message) {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(0,0,0,0.8);
+                color: white;
+                padding: 12px 24px;
+                border-radius: 8px;
+                z-index: 1000;
+                font-size: 14px;
+                pointer-events: none;
+            `;
+            notification.textContent = message;
+            document.getElementById('video-container').appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 2000);
+        }
+        
+        // ==================== FULLSCREEN & ORIENTATION ====================
+        
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                const container = document.getElementById('video-container');
+                if (container.requestFullscreen) {
+                    container.requestFullscreen();
+                } else if (container.webkitRequestFullscreen) {
+                    container.webkitRequestFullscreen();
+                } else if (container.mozRequestFullScreen) {
+                    container.mozRequestFullScreen();
+                }
+                playerState.isFullscreen = true;
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                }
+                playerState.isFullscreen = false;
+            }
+        }
+        
+        function handleFullscreenChange() {
+            playerState.isFullscreen = !!document.fullscreenElement;
             const icon = document.getElementById('fullscreenIcon');
-            icon.className = document.fullscreenElement ? 'fas fa-compress' : 'fas fa-expand';
-        });
+            icon.className = playerState.isFullscreen ? 'fas fa-compress' : 'fas fa-expand';
+        }
+        
+        function handleOrientationChange() {
+            if (!playerState.autoRotation) return;
+            
+            playerState.orientation = window.screen.orientation.type;
+            
+            if (playerState.orientation.includes('portrait')) {
+                // In portrait, we might want to adjust layout
+                console.log('Portrait orientation');
+            } else {
+                console.log('Landscape orientation');
+            }
+        }
+        
+        // ==================== CONTROLS VISIBILITY ====================
+        
+        function toggleControlsVisibility() {
+            playerState.controlsVisible = !playerState.controlsVisible;
+            
+            if (playerState.controlsVisible) {
+                controlsContainer.classList.remove('hidden');
+                topBar.classList.remove('hidden');
+                startHideControlsTimer();
+            } else {
+                controlsContainer.classList.add('hidden');
+                topBar.classList.add('hidden');
+                clearTimeout(playerState.hideControlsTimeout);
+            }
+        }
+        
+        function showControlsTemporarily() {
+            if (!playerState.controlsVisible) {
+                controlsContainer.classList.remove('hidden');
+                topBar.classList.remove('hidden');
+                playerState.controlsVisible = true;
+            }
+            
+            clearTimeout(playerState.hideControlsTimeout);
+            startHideControlsTimer();
+        }
+        
+        function startHideControlsTimer() {
+            if (playerState.isPlaying) {
+                clearTimeout(playerState.hideControlsTimeout);
+                playerState.hideControlsTimeout = setTimeout(() => {
+                    if (playerState.controlsVisible && !settingsMenu.classList.contains('active')) {
+                        controlsContainer.classList.add('hidden');
+                        topBar.classList.add('hidden');
+                        playerState.controlsVisible = false;
+                    }
+                }, 3000);
+            }
+        }
+        
+        // ==================== SETTINGS MENUS ====================
+        
+        function toggleSettings() {
+            settingsMenu.classList.toggle('active');
+            speedMenu.style.display = 'none';
+            qualityMenu.style.display = 'none';
+        }
+        
+        function toggleSpeedMenu() {
+            speedMenu.style.display = speedMenu.style.display === 'block' ? 'none' : 'block';
+            qualityMenu.style.display = 'none';
+        }
+        
+        function toggleQualityMenu() {
+            qualityMenu.style.display = qualityMenu.style.display === 'block' ? 'none' : 'block';
+            speedMenu.style.display = 'none';
+        }
+        
+        function hideSettingsMenus() {
+            settingsMenu.classList.remove('active');
+            speedMenu.style.display = 'none';
+            qualityMenu.style.display = 'none';
+        }
+        
+        // ==================== PROGRESS BAR TOOLTIP ====================
+        
+        function showProgressTooltip(e) {
+            const rect = e.target.getBoundingClientRect();
+            const pos = (e.clientX - rect.left) / rect.width;
+            const time = pos * video.duration;
+            
+            const tooltip = document.getElementById('progressTooltip');
+            tooltip.textContent = formatTime(time);
+            tooltip.style.left = `${e.clientX - rect.left}px`;
+            tooltip.style.display = 'block';
+        }
+        
+        function hideProgressTooltip() {
+            document.getElementById('progressTooltip').style.display = 'none';
+        }
+        
+        // ==================== ERROR HANDLING ====================
+        
+        function showError(title, message) {
+            loadingScreen.style.display = 'none';
+            document.getElementById('errorTitle').textContent = title;
+            document.getElementById('errorMessage').textContent = message;
+            errorScreen.style.display = 'flex';
+        }
+        
+        function retryLoading() {
+            errorScreen.style.display = 'none';
+            loadingScreen.style.display = 'flex';
+            initPlayer();
+        }
+        
+        function showBuffering() {
+            // Show buffering indicator
+            console.log('Buffering...');
+        }
+        
+        function hideBuffering() {
+            // Hide buffering indicator
+            console.log('Playing...');
+        }
+        
+        function onVideoEnd() {
+            if (playerState.loop) {
+                video.currentTime = 0;
+                video.play();
+            } else if (playerState.autoplay) {
+                // Auto play next video if available
+            }
+        }
+        
+        // ==================== UTILITY FUNCTIONS ====================
+        
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return '00:00';
+            
+            const hours = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            const secs = Math.floor(seconds % 60);
+            
+            if (hours > 0) {
+                return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            } else {
+                return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }
+        }
+        
+        function closePlayer() {
+            if (window.Telegram && window.Telegram.WebApp) {
+                Telegram.WebApp.close();
+            } else {
+                window.history.back();
+            }
+        }
+        
+        function handleResize() {
+            // Adjust UI for different screen sizes
+            if (window.innerWidth < 768) {
+                // Mobile adjustments
+            } else {
+                // Desktop adjustments
+            }
+        }
+        
+        // ==================== INITIALIZE PLAYER ====================
+        
+        document.addEventListener('DOMContentLoaded', initPlayer);
     </script>
 </body>
-</html>
+    </html>
