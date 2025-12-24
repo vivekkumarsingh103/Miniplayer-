@@ -186,6 +186,16 @@
             transform: translateY(-2px);
         }
         
+        .direct-btn {
+            background: #333;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        
         /* Mobile Responsive */
         @media (max-width: 768px) {
             .header {
@@ -221,7 +231,7 @@
             <!-- Loading Overlay -->
             <div class="loading-overlay" id="loadingOverlay">
                 <div class="loading-spinner"></div>
-                <div class="loading-text" id="loadingText">Setting up stream...</div>
+                <div class="loading-text" id="loadingText">Initializing Google Drive stream...</div>
             </div>
             
             <!-- Error Overlay -->
@@ -229,18 +239,20 @@
                 <div class="error-icon">⚠️</div>
                 <div class="error-title" id="errorTitle">Stream Error</div>
                 <div class="error-message" id="errorMessage"></div>
-                <button class="retry-btn" onclick="tryAlternativeStream()">Try Alternative Stream</button>
+                <button class="retry-btn" onclick="retryStreaming()">Retry Streaming</button>
+                <button class="direct-btn" onclick="useDirectLink()">Use Direct Link</button>
             </div>
         </div>
     </div>
 
     <script>
         // ============================================
-        // CONFIGURATION
+        // CONFIGURATION - CHANGE THIS
         // ============================================
         
         // PUT YOUR GOOGLE DRIVE API KEY HERE
-        const GOOGLE_DRIVE_API_KEY = 'YOUR_API_KEY_HERE';
+        // Get from: https://console.cloud.google.com/apis/credentials
+        const GOOGLE_DRIVE_API_KEY = 'AIzaSyCzKdXvN5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5';
         
         // ============================================
         // INITIALIZATION
@@ -250,7 +262,9 @@
         const tg = window.Telegram.WebApp;
         tg.expand();
         tg.BackButton.show();
-        tg.BackButton.onClick(() => tg.close());
+        tg.BackButton.onClick(() => {
+            tg.close();
+        });
         
         // DOM Elements
         const videoPlayer = document.getElementById('videoPlayer');
@@ -262,9 +276,10 @@
         const errorTitle = document.getElementById('errorTitle');
         const errorMessage = document.getElementById('errorMessage');
         
-        // State
+        // State variables
         let currentFileId = '';
-        let currentStreamIndex = 0;
+        let currentMethod = 'api'; // 'api' or 'direct'
+        let blobUrl = null;
         
         // ============================================
         // URL PARAMETERS
@@ -282,207 +297,253 @@
         document.title = `${episodeId.toUpperCase()} - ${dramaName}`;
         
         // ============================================
-        // STREAMING METHODS
+        // STREAMING FUNCTIONS
         // ============================================
         
-        // Different streaming methods (in order of preference)
-        const STREAM_METHODS = [
-            // Method 1: Google Drive API with Range support (BEST)
-            {
-                name: 'Google Drive API',
-                getUrl: (fileId) => `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${GOOGLE_DRIVE_API_KEY}`,
-                supportsRange: true
-            },
-            // Method 2: Direct download link (often works for streaming)
-            {
-                name: 'Direct Link',
-                getUrl: (fileId) => `https://drive.google.com/uc?id=${fileId}&export=download`,
-                supportsRange: false
-            },
-            // Method 3: Alternative link
-            {
-                name: 'Alternative',
-                getUrl: (fileId) => `https://docs.google.com/uc?export=download&id=${fileId}`,
-                supportsRange: false
+        // Function 1: Stream using Google Drive API (Blob method)
+        async function streamWithGoogleDriveAPI(fileId) {
+            try {
+                console.log('🎬 Starting Google Drive API streaming...');
+                
+                // Clean up previous blob URL if exists
+                if (blobUrl) {
+                    URL.revokeObjectURL(blobUrl);
+                    blobUrl = null;
+                }
+                
+                // Build API URL
+                const apiUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${GOOGLE_DRIVE_API_KEY}`;
+                
+                // Show loading
+                showLoading('Connecting to Google Drive...');
+                
+                // Fetch the video with streaming support
+                const response = await fetch(apiUrl, {
+                    headers: {
+                        'Range': 'bytes=0-',
+                        'Accept': 'video/*'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Google Drive API Error: ${response.status} ${response.statusText}`);
+                }
+                
+                // Get content type and size
+                const contentType = response.headers.get('content-type') || 'video/mp4';
+                const contentLength = response.headers.get('content-length');
+                
+                console.log(`📦 Video info: ${contentType}, ${contentLength} bytes`);
+                
+                // Get video as blob
+                const videoBlob = await response.blob();
+                console.log(`✅ Blob received: ${videoBlob.size} bytes, type: ${videoBlob.type}`);
+                
+                // Create object URL for streaming
+                blobUrl = URL.createObjectURL(videoBlob);
+                
+                // Set video source
+                videoPlayer.src = blobUrl;
+                videoPlayer.type = contentType;
+                
+                // Load the video
+                videoPlayer.load();
+                
+                console.log('🎥 Video source set, waiting for playback...');
+                
+                // Set up event listeners
+                setupVideoEvents();
+                
+                // Try to play
+                const playPromise = videoPlayer.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(error => {
+                        console.log('⏸️ Autoplay blocked, waiting for user interaction');
+                        hideLoading();
+                        loadingText.textContent = 'Tap to play video';
+                        loadingOverlay.style.display = 'flex';
+                        loadingOverlay.style.cursor = 'pointer';
+                        loadingOverlay.onclick = () => {
+                            videoPlayer.play();
+                            loadingOverlay.style.display = 'none';
+                        };
+                    });
+                }
+                
+                return true;
+                
+            } catch (error) {
+                console.error('❌ Google Drive API streaming failed:', error);
+                throw error;
             }
-        ];
-        
-        // ============================================
-        // VIDEO PLAYBACK
-        // ============================================
-        
-        async function initPlayer() {
-            if (!fileId) {
-                showError('No video file ID provided', 'Missing File');
-                return;
-            }
-            
-            currentFileId = fileId;
-            currentStreamIndex = 0;
-            
-            console.log('Starting player with file ID:', currentFileId);
-            
-            // Configure video player
-            configureVideoPlayer();
-            
-            // Start loading video
-            loadVideo();
         }
         
-        function configureVideoPlayer() {
-            // IMPORTANT: Set these properties for streaming
-            videoPlayer.preload = 'auto';
-            videoPlayer.playsInline = true;
-            videoPlayer.crossOrigin = 'anonymous'; // Important for CORS
-            
+        // Function 2: Stream using direct link (fallback)
+        async function streamWithDirectLink(fileId) {
+            try {
+                console.log('🎬 Starting direct link streaming...');
+                
+                // Clean up previous blob URL
+                if (blobUrl) {
+                    URL.revokeObjectURL(blobUrl);
+                    blobUrl = null;
+                }
+                
+                // Build direct URL
+                const directUrl = `https://drive.google.com/uc?id=${fileId}&export=download`;
+                
+                // Show loading
+                showLoading('Loading direct stream...');
+                
+                // Set video source
+                videoPlayer.src = directUrl;
+                videoPlayer.type = 'video/mp4';
+                
+                // Load the video
+                videoPlayer.load();
+                
+                console.log('🎥 Direct link set');
+                
+                // Set up event listeners
+                setupVideoEvents();
+                
+                // Try to play
+                videoPlayer.play().catch(error => {
+                    console.log('Autoplay blocked');
+                    hideLoading();
+                    loadingText.textContent = 'Tap to play video';
+                    loadingOverlay.style.display = 'flex';
+                    loadingOverlay.onclick = () => {
+                        videoPlayer.play();
+                        loadingOverlay.style.display = 'none';
+                    };
+                });
+                
+                return true;
+                
+            } catch (error) {
+                console.error('❌ Direct link streaming failed:', error);
+                throw error;
+            }
+        }
+        
+        // Function 3: Setup video event listeners
+        function setupVideoEvents() {
             // Remove existing listeners
             videoPlayer.oncanplay = null;
             videoPlayer.onplaying = null;
             videoPlayer.onerror = null;
+            videoPlayer.onended = null;
             videoPlayer.onwaiting = null;
-            videoPlayer.onprogress = null;
             
             // Video can play
             videoPlayer.oncanplay = () => {
                 console.log('✅ Video can play');
                 hideLoading();
                 hideError();
-                
-                // Try to autoplay
-                videoPlayer.play().then(() => {
-                    console.log('▶️ Autoplay started');
-                }).catch(error => {
-                    console.log('⏸️ Autoplay blocked');
-                    hideLoading();
-                    loadingText.textContent = 'Tap to play';
-                    loadingOverlay.style.display = 'flex';
-                    loadingOverlay.style.cursor = 'pointer';
-                    loadingOverlay.onclick = () => {
-                        videoPlayer.play();
-                        loadingOverlay.style.display = 'none';
-                    };
-                });
             };
             
             // Video playing
             videoPlayer.onplaying = () => {
-                console.log('🎬 Video playing');
+                console.log('▶️ Video playing');
                 hideLoading();
+                hideError();
             };
             
-            // Buffering
+            // Video error
+            videoPlayer.onerror = (e) => {
+                console.error('❌ Video error:', videoPlayer.error);
+                
+                let errorMsg = 'Video playback error. ';
+                if (videoPlayer.error) {
+                    switch(videoPlayer.error.code) {
+                        case 1:
+                            errorMsg += 'Video was aborted.';
+                            break;
+                        case 2:
+                            errorMsg += 'Network error.';
+                            break;
+                        case 3:
+                            errorMsg += 'Video decoding failed.';
+                            break;
+                        case 4:
+                            errorMsg += 'Video format not supported.';
+                            break;
+                    }
+                }
+                
+                showError('Playback Error', errorMsg);
+            };
+            
+            // Video ended
+            videoPlayer.onended = () => {
+                console.log('🏁 Video ended');
+                // Clean up blob URL
+                if (blobUrl) {
+                    URL.revokeObjectURL(blobUrl);
+                    blobUrl = null;
+                }
+            };
+            
+            // Video buffering
             videoPlayer.onwaiting = () => {
                 if (!loadingOverlay.style.display || loadingOverlay.style.display === 'none') {
                     showLoading('Buffering...');
                 }
             };
             
-            // Progress (buffer monitoring)
+            // Video progress (buffer monitoring)
             videoPlayer.onprogress = () => {
                 if (videoPlayer.buffered.length > 0) {
                     const bufferedEnd = videoPlayer.buffered.end(videoPlayer.buffered.length - 1);
                     const currentTime = videoPlayer.currentTime;
                     const bufferAhead = bufferedEnd - currentTime;
                     
-                    console.log(`Buffer: ${bufferAhead.toFixed(1)}s ahead`);
-                    
-                    // If we have good buffer, hide loading
-                    if (bufferAhead > 10) {
+                    // If buffer is good, hide loading
+                    if (bufferAhead > 5) {
                         hideLoading();
                     }
                 }
             };
-            
-            // Error handling
-            videoPlayer.onerror = (e) => {
-                console.error('❌ Video error:', videoPlayer.error);
-                
-                let errorMsg = 'Failed to load video. ';
-                
-                if (videoPlayer.error) {
-                    switch(videoPlayer.error.code) {
-                        case 1:
-                            errorMsg = 'Video was aborted.';
-                            break;
-                        case 2:
-                            errorMsg = 'Network error. Please check your connection.';
-                            break;
-                        case 3:
-                            errorMsg = 'Video decoding failed.';
-                            break;
-                        case 4:
-                            errorMsg = 'Video format not supported.';
-                            break;
-                    }
-                }
-                
-                // If current method failed, try next one
-                if (currentStreamIndex < STREAM_METHODS.length - 1) {
-                    currentStreamIndex++;
-                    console.log(`Trying next method: ${STREAM_METHODS[currentStreamIndex].name}`);
-                    
-                    showLoading(`Trying ${STREAM_METHODS[currentStreamIndex].name}...`);
-                    
-                    setTimeout(() => {
-                        loadVideo();
-                    }, 1000);
-                } else {
-                    showError(
-                        'All streaming methods failed',
-                        `${errorMsg}\n\nPossible issues:\n• Video is private\n• File format not supported\n• Network issue\n• Try opening in a browser first`
-                    );
-                }
-            };
         }
         
-        function loadVideo() {
-            if (currentStreamIndex >= STREAM_METHODS.length) {
-                currentStreamIndex = 0;
+        // ============================================
+        // MAIN PLAYBACK FUNCTION
+        // ============================================
+        
+        async function startPlayback() {
+            if (!fileId) {
+                showError('Missing File', 'No video file ID provided in URL.');
+                return;
             }
             
-            const method = STREAM_METHODS[currentStreamIndex];
-            const streamUrl = method.getUrl(currentFileId);
+            currentFileId = fileId;
             
-            console.log(`🔄 Loading: ${method.name}`);
-            console.log(`🔗 URL: ${streamUrl}`);
+            // Check API key
+            if (!GOOGLE_DRIVE_API_KEY || GOOGLE_DRIVE_API_KEY.includes('AIzaSyC-ZD6viBW3wT8uKy58bLClQHISnYkD8-M')) {
+                console.warn('⚠️ Using default/demo API key. Replace with your own!');
+            }
             
-            showLoading(`Loading ${method.name}...`);
-            hideError();
+            console.log('🎬 Starting playback...');
+            console.log(`📁 File ID: ${currentFileId}`);
+            console.log(`🔑 API Key: ${GOOGLE_DRIVE_API_KEY ? 'Set' : 'Not set'}`);
             
-            // IMPORTANT: Clear previous source and add cache busting
-            videoPlayer.src = '';
-            videoPlayer.load();
-            
-            // Add timestamp to prevent caching issues
-            const timestamp = new Date().getTime();
-            const finalUrl = `${streamUrl}&_=${timestamp}`;
-            
-            // Set new source
-            videoPlayer.src = finalUrl;
-            
-            // Load the video
-            videoPlayer.load();
-            
-            // Set timeout for loading
-            setTimeout(() => {
-                if (videoPlayer.readyState < 2) {
-                    console.log('⏰ Load timeout, trying next method');
-                    if (currentStreamIndex < STREAM_METHODS.length - 1) {
-                        currentStreamIndex++;
-                        loadVideo();
-                    }
+            // Try Google Drive API first
+            currentMethod = 'api';
+            try {
+                await streamWithGoogleDriveAPI(currentFileId);
+            } catch (apiError) {
+                console.log('🔄 Google Drive API failed, trying direct link...');
+                currentMethod = 'direct';
+                
+                try {
+                    await streamWithDirectLink(currentFileId);
+                } catch (directError) {
+                    showError(
+                        'Streaming Failed',
+                        'Both streaming methods failed.\n\nPossible issues:\n• Invalid API key\n• Video is private\n• Network connection\n• File format issue'
+                    );
                 }
-            }, 10000);
-        }
-        
-        function tryAlternativeStream() {
-            hideError();
-            if (currentStreamIndex < STREAM_METHODS.length - 1) {
-                currentStreamIndex++;
-                loadVideo();
-            } else {
-                currentStreamIndex = 0;
-                loadVideo();
             }
         }
         
@@ -510,125 +571,105 @@
             errorOverlay.style.display = 'none';
         }
         
+        function retryStreaming() {
+            hideError();
+            startPlayback();
+        }
+        
+        function useDirectLink() {
+            hideError();
+            currentMethod = 'direct';
+            streamWithDirectLink(currentFileId);
+        }
+        
         function goBack() {
+            // Clean up blob URL before closing
+            if (blobUrl) {
+                URL.revokeObjectURL(blobUrl);
+                blobUrl = null;
+            }
             tg.close();
         }
         
         // ============================================
-async function loadVideo() {
-    if (currentStreamIndex >= STREAM_METHODS.length) {
-        currentStreamIndex = 0;
-    }
-    
-    const method = STREAM_METHODS[currentStreamIndex];
-    
-    console.log(`🔄 Loading: ${method.name}`);
-    showLoading(`Loading ${method.name}...`);
-    hideError();
-    
-    // Clear previous source
-    videoPlayer.src = '';
-    videoPlayer.load();
-    
-    if (method.name === 'Google Drive API') {
-        // USE STREAMING FIX for API method
-        await streamVideoWithBlob(currentFileId);
-    } else {
-        // Use normal method for other URLs
-        const streamUrl = method.getUrl(currentFileId);
-        const timestamp = new Date().getTime();
-        const finalUrl = `${streamUrl}&_=${timestamp}`;
+        // KEYBOARD SHORTCUTS
+        // ============================================
         
-        videoPlayer.src = finalUrl;
-        videoPlayer.load();
-    }
-    
-    // Set timeout
-    setTimeout(() => {
-        if (videoPlayer.readyState < 2 && currentStreamIndex < STREAM_METHODS.length - 1) {
-            console.log('⏰ Load timeout, trying next method');
-            currentStreamIndex++;
-            loadVideo();
-        }
-    }, 10000);
-}
-
-// ============================================
-// STREAMING FIX FUNCTION (ADD THIS)
-// ============================================
-
-async function streamVideoWithBlob(fileId) {
-    try {
-        console.log('🎬 Using streaming fix for Google Drive API');
-        
-        const apiUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${GOOGLE_DRIVE_API_KEY}`;
-        
-        // Show loading message
-        showLoading('Fetching video stream...');
-        
-        // Fetch video with streaming headers
-        const response = await fetch(apiUrl, {
-            headers: {
-                'Accept': 'video/*',
-                'Range': 'bytes=0-'
+        document.addEventListener('keydown', (e) => {
+            switch(e.key.toLowerCase()) {
+                case ' ':
+                case 'k':
+                    // Play/Pause
+                    if (videoPlayer.paused) {
+                        videoPlayer.play();
+                    } else {
+                        videoPlayer.pause();
+                    }
+                    e.preventDefault();
+                    break;
+                    
+                case 'arrowleft':
+                    // Seek back 10 seconds
+                    videoPlayer.currentTime = Math.max(0, videoPlayer.currentTime - 10);
+                    break;
+                    
+                case 'arrowright':
+                    // Seek forward 10 seconds
+                    videoPlayer.currentTime = Math.min(videoPlayer.duration, videoPlayer.currentTime + 10);
+                    break;
+                    
+                case 'f':
+                    // Toggle fullscreen
+                    if (!document.fullscreenElement) {
+                        videoPlayer.requestFullscreen();
+                    } else {
+                        document.exitFullscreen();
+                    }
+                    break;
+                    
+                case 'm':
+                    // Toggle mute
+                    videoPlayer.muted = !videoPlayer.muted;
+                    break;
             }
         });
         
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
+        // ============================================
+        // INITIALIZE PLAYER
+        // ============================================
         
-        // Get video as blob
-        const blob = await response.blob();
-        console.log('✅ Video blob loaded:', blob.size, 'bytes');
-        
-        // Create object URL for streaming
-        const blobUrl = URL.createObjectURL(blob);
-        
-        // Set as video source
-        videoPlayer.src = blobUrl;
-        videoPlayer.load();
-        
-        console.log('🎥 Video source set to blob URL');
-        
-        // Set up cleanup when video ends
-        videoPlayer.onended = () => {
-            URL.revokeObjectURL(blobUrl);
-            console.log('🧹 Cleaned up blob URL');
-        };
-        
-        // Also cleanup on error
-        videoPlayer.onerror = () => {
-            URL.revokeObjectURL(blobUrl);
-        };
-        
-        // Try to play
-        videoPlayer.play().catch(e => {
-            console.log('⏸️ Autoplay blocked, waiting for user');
-            hideLoading();
-            loadingText.textContent = 'Tap to play';
-            loadingOverlay.style.display = 'flex';
-            loadingOverlay.style.cursor = 'pointer';
-            loadingOverlay.onclick = () => {
-                videoPlayer.play();
-                loadingOverlay.style.display = 'none';
-            };
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🎬 Drama Stream Player Initialized');
+            
+            // Start playback
+            startPlayback();
+            
+            // Handle page visibility changes
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    // Page is hidden, pause video
+                    if (!videoPlayer.paused) {
+                        videoPlayer.pause();
+                    }
+                }
+            });
+            
+            // Handle beforeunload for cleanup
+            window.addEventListener('beforeunload', () => {
+                // Pause video
+                videoPlayer.pause();
+                
+                // Clean up blob URL
+                if (blobUrl) {
+                    URL.revokeObjectURL(blobUrl);
+                    blobUrl = null;
+                }
+                
+                // Clear video source
+                videoPlayer.src = '';
+                videoPlayer.load();
+            });
         });
-        
-    } catch (error) {
-        console.error('❌ Streaming fix failed:', error);
-        
-        // Fallback to direct URL
-        console.log('🔄 Falling back to direct URL');
-        currentStreamIndex = 1; // Skip to direct link method
-        const streamUrl = STREAM_METHODS[1].getUrl(fileId);
-        const timestamp = new Date().getTime();
-        const finalUrl = `${streamUrl}&_=${timestamp}`;
-        
-        videoPlayer.src = finalUrl;
-        videoPlayer.load();
-    }
-        }
     </script>
 </body>
     </html>
