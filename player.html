@@ -13,8 +13,8 @@
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #000;
-            color: white;
+            background: #000000;
+            color: #ffffff;
             height: 100vh;
             overflow: hidden;
         }
@@ -23,70 +23,101 @@
             height: 100vh;
             display: flex;
             flex-direction: column;
+            background: #000;
         }
         
         /* Header */
         .header {
-            background: #1a1a1a;
-            padding: 15px;
-            border-bottom: 1px solid #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px 20px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            position: relative;
+            z-index: 10;
         }
         
         .back-btn {
-            background: none;
+            background: rgba(255, 255, 255, 0.2);
             border: none;
             color: white;
-            font-size: 24px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
             cursor: pointer;
-            padding: 5px;
+            transition: all 0.3s ease;
         }
         
-        .title {
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+        
+        .title-container {
             flex: 1;
+            min-width: 0;
+        }
+        
+        .drama-title {
             font-size: 16px;
-            font-weight: 500;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 3px;
+        }
+        
+        .episode-info {
+            font-size: 13px;
+            opacity: 0.9;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
         
-        /* Player */
+        /* Player Area */
         .player-container {
             flex: 1;
             background: #000;
             position: relative;
+            overflow: hidden;
         }
         
         #videoPlayer {
             width: 100%;
             height: 100%;
             background: #000;
+            object-fit: contain;
         }
         
-        /* Loading */
-        .loading {
+        /* Loading State */
+        .loading-overlay {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-            background: rgba(0,0,0,0.8);
-            padding: 30px;
-            border-radius: 15px;
-            min-width: 200px;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
         }
         
-        .spinner {
-            border: 4px solid rgba(255,255,255,0.3);
-            border-top: 4px solid #007AFF;
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            border-top-color: #667eea;
             animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
+            margin-bottom: 20px;
         }
         
         @keyframes spin {
@@ -94,68 +125,79 @@
             100% { transform: rotate(360deg); }
         }
         
-        /* Error */
-        .error {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+        .loading-text {
+            font-size: 16px;
+            color: #aaa;
             text-align: center;
-            background: rgba(255,0,0,0.1);
-            padding: 30px;
-            border-radius: 15px;
-            border: 1px solid rgba(255,0,0,0.3);
+        }
+        
+        /* Error State */
+        .error-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
             display: none;
-            max-width: 80%;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 30;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .error-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+            color: #ff4757;
+        }
+        
+        .error-title {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #ff4757;
+        }
+        
+        .error-message {
+            font-size: 15px;
+            color: #aaa;
+            margin-bottom: 25px;
+            line-height: 1.4;
+            max-width: 300px;
         }
         
         .retry-btn {
-            background: #007AFF;
+            background: #667eea;
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            margin-top: 15px;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 500;
             cursor: pointer;
+            transition: all 0.3s ease;
         }
         
-        /* Controls */
-        .controls {
-            background: rgba(0,0,0,0.9);
-            padding: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 10px;
+        .retry-btn:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
         }
         
-        .control-btn {
-            background: #007AFF;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 8px;
-            cursor: pointer;
-            min-width: 100px;
-        }
-        
-        .quality-btn {
-            background: #333;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-        
-        /* Mobile */
-        @media (max-width: 600px) {
-            .controls {
-                flex-direction: column;
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .header {
+                padding: 12px 15px;
             }
             
-            .control-btn {
-                width: 100%;
+            .drama-title {
+                font-size: 15px;
+            }
+            
+            .episode-info {
+                font-size: 12px;
             }
         }
     </style>
@@ -165,64 +207,44 @@
         <!-- Header -->
         <div class="header">
             <button class="back-btn" onclick="goBack()">←</button>
-            <div class="title" id="videoTitle">Loading...</div>
+            <div class="title-container">
+                <div class="drama-title" id="dramaTitle">Loading Drama...</div>
+                <div class="episode-info" id="episodeInfo">Episode Loading...</div>
+            </div>
         </div>
         
-        <!-- Player -->
+        <!-- Player Container -->
         <div class="player-container">
-            <video id="videoPlayer" controls playsinline preload="auto"></video>
+            <!-- Video Player -->
+            <video id="videoPlayer" controls playsinline></video>
             
-            <!-- Loading -->
-            <div class="loading" id="loading">
-                <div class="spinner"></div>
-                <div id="loadingText">Initializing stream...</div>
+            <!-- Loading Overlay -->
+            <div class="loading-overlay" id="loadingOverlay">
+                <div class="loading-spinner"></div>
+                <div class="loading-text" id="loadingText">Setting up stream...</div>
             </div>
             
-            <!-- Error -->
-            <div class="error" id="errorBox">
-                <h3 id="errorTitle">Playback Error</h3>
-                <p id="errorText"></p>
-                <div style="margin-top: 15px;">
-                    <button class="retry-btn" onclick="retryPlayback()">Retry</button>
-                    <button class="quality-btn" onclick="tryDifferentStream()" style="margin-left: 10px;">Try Different Stream</button>
-                </div>
+            <!-- Error Overlay -->
+            <div class="error-overlay" id="errorOverlay">
+                <div class="error-icon">⚠️</div>
+                <div class="error-title" id="errorTitle">Stream Error</div>
+                <div class="error-message" id="errorMessage"></div>
+                <button class="retry-btn" onclick="tryAlternativeStream()">Try Alternative Stream</button>
             </div>
-        </div>
-        
-        <!-- Controls -->
-        <div class="controls">
-            <button class="control-btn" onclick="prevEpisode()">Previous</button>
-            <button class="quality-btn" onclick="toggleQuality()">Quality</button>
-            <button class="control-btn" onclick="nextEpisode()">Next</button>
         </div>
     </div>
 
     <script>
-        // ==============================
+        // ============================================
         // CONFIGURATION
-        // ==============================
+        // ============================================
         
-        // Google Drive URL patterns
-        const GDRIVE_URLS = {
-            // Best for streaming (supports range requests)
-            'direct': 'https://drive.google.com/uc?id={file_id}&export=download',
-            
-            // Alternative format
-            'alt': 'https://docs.google.com/uc?export=download&id={file_id}',
-            
-            // Direct video stream
-            'stream': 'https://www.googleapis.com/drive/v3/files/{file_id}?alt=media&key=AIzaSyCzKdXvN5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5',
-            
-            // Embedded player (iframe)
-            'embed': 'https://drive.google.com/file/d/{file_id}/preview'
-        };
+        // PUT YOUR GOOGLE DRIVE API KEY HERE
+        const GOOGLE_DRIVE_API_KEY = 'YOUR_API_KEY_HERE';
         
-        // Streaming priority order (best first)
-        const STREAM_PRIORITY = ['direct', 'alt', 'stream'];
-        
-        // ==============================
+        // ============================================
         // INITIALIZATION
-        // ==============================
+        // ============================================
         
         // Telegram WebApp
         const tg = window.Telegram.WebApp;
@@ -232,60 +254,64 @@
         
         // DOM Elements
         const videoPlayer = document.getElementById('videoPlayer');
-        const videoTitle = document.getElementById('videoTitle');
-        const loading = document.getElementById('loading');
+        const dramaTitle = document.getElementById('dramaTitle');
+        const episodeInfo = document.getElementById('episodeInfo');
+        const loadingOverlay = document.getElementById('loadingOverlay');
         const loadingText = document.getElementById('loadingText');
-        const errorBox = document.getElementById('errorBox');
+        const errorOverlay = document.getElementById('errorOverlay');
         const errorTitle = document.getElementById('errorTitle');
-        const errorText = document.getElementById('errorText');
+        const errorMessage = document.getElementById('errorMessage');
         
         // State
         let currentFileId = '';
         let currentStreamIndex = 0;
-        let isSeeking = false;
-        let retryCount = 0;
-        const MAX_RETRIES = 3;
         
-        // ==============================
-        // URL PARSING
-        // ==============================
+        // ============================================
+        // URL PARAMETERS
+        // ============================================
         
-        // Get URL parameters
+        // Get parameters from URL
         const urlParams = new URLSearchParams(window.location.search);
-        const drama = urlParams.get('drama') || 'Unknown';
-        const episode = urlParams.get('episode') || 's01e01';
+        const dramaName = urlParams.get('drama') || 'Unknown Drama';
+        const episodeId = urlParams.get('episode') || 's01e01';
         const fileId = urlParams.get('file_id');
         
-        // Set title
-        videoTitle.textContent = `${drama} - ${episode.toUpperCase()}`;
+        // Set titles
+        dramaTitle.textContent = dramaName;
+        episodeInfo.textContent = `Episode: ${episodeId.toUpperCase()}`;
+        document.title = `${episodeId.toUpperCase()} - ${dramaName}`;
         
-        // ==============================
-        // STREAMING FUNCTIONS
-        // ==============================
+        // ============================================
+        // STREAMING METHODS
+        // ============================================
         
-        function createStreamUrl(fileId, type = 'direct') {
-            return GDRIVE_URLS[type].replace('{file_id}', fileId);
-        }
-        
-        function getNextStreamUrl() {
-            if (currentStreamIndex >= STREAM_PRIORITY.length - 1) {
-                return null; // No more streams to try
+        // Different streaming methods (in order of preference)
+        const STREAM_METHODS = [
+            // Method 1: Google Drive API with Range support (BEST)
+            {
+                name: 'Google Drive API',
+                getUrl: (fileId) => `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${GOOGLE_DRIVE_API_KEY}`,
+                supportsRange: true
+            },
+            // Method 2: Direct download link (often works for streaming)
+            {
+                name: 'Direct Link',
+                getUrl: (fileId) => `https://drive.google.com/uc?id=${fileId}&export=download`,
+                supportsRange: false
+            },
+            // Method 3: Alternative link
+            {
+                name: 'Alternative',
+                getUrl: (fileId) => `https://docs.google.com/uc?export=download&id=${fileId}`,
+                supportsRange: false
             }
-            currentStreamIndex++;
-            const streamType = STREAM_PRIORITY[currentStreamIndex];
-            return createStreamUrl(currentFileId, streamType);
-        }
+        ];
         
-        function getCurrentStreamUrl() {
-            const streamType = STREAM_PRIORITY[currentStreamIndex] || STREAM_PRIORITY[0];
-            return createStreamUrl(currentFileId, streamType);
-        }
-        
-        // ==============================
+        // ============================================
         // VIDEO PLAYBACK
-        // ==============================
+        // ============================================
         
-        async function initVideoPlayer() {
+        async function initPlayer() {
             if (!fileId) {
                 showError('No video file ID provided', 'Missing File');
                 return;
@@ -293,246 +319,204 @@
             
             currentFileId = fileId;
             currentStreamIndex = 0;
-            retryCount = 0;
             
-            console.log('Starting playback with file ID:', currentFileId);
+            console.log('Starting player with file ID:', currentFileId);
             
-            // Configure video player for better streaming
+            // Configure video player
             configureVideoPlayer();
             
-            // Start loading
+            // Start loading video
             loadVideo();
         }
         
         function configureVideoPlayer() {
-            // Set buffer size for better streaming
+            // IMPORTANT: Set these properties for streaming
             videoPlayer.preload = 'auto';
             videoPlayer.playsInline = true;
-            videoPlayer.crossOrigin = 'anonymous';
+            videoPlayer.crossOrigin = 'anonymous'; // Important for CORS
             
-            // Remove all event listeners first
+            // Remove existing listeners
             videoPlayer.oncanplay = null;
             videoPlayer.onplaying = null;
             videoPlayer.onerror = null;
             videoPlayer.onwaiting = null;
-            videoPlayer.onseeking = null;
-            videoPlayer.onseeked = null;
+            videoPlayer.onprogress = null;
             
-            // Can play - video is ready
+            // Video can play
             videoPlayer.oncanplay = () => {
-                console.log('Video can play');
+                console.log('✅ Video can play');
                 hideLoading();
+                hideError();
                 
                 // Try to autoplay
                 videoPlayer.play().then(() => {
-                    console.log('Autoplay successful');
+                    console.log('▶️ Autoplay started');
                 }).catch(error => {
-                    console.log('Autoplay blocked, user interaction required');
+                    console.log('⏸️ Autoplay blocked');
                     hideLoading();
-                    loadingText.textContent = 'Tap to play video';
-                    loading.style.display = 'block';
-                    loading.style.cursor = 'pointer';
-                    loading.onclick = () => {
+                    loadingText.textContent = 'Tap to play';
+                    loadingOverlay.style.display = 'flex';
+                    loadingOverlay.style.cursor = 'pointer';
+                    loadingOverlay.onclick = () => {
                         videoPlayer.play();
-                        loading.style.display = 'none';
+                        loadingOverlay.style.display = 'none';
                     };
                 });
             };
             
-            // Playing started
+            // Video playing
             videoPlayer.onplaying = () => {
-                console.log('Video playing');
+                console.log('🎬 Video playing');
                 hideLoading();
-                hideError();
-                retryCount = 0;
             };
             
             // Buffering
             videoPlayer.onwaiting = () => {
-                if (!isSeeking) {
-                    console.log('Video buffering...');
+                if (!loadingOverlay.style.display || loadingOverlay.style.display === 'none') {
                     showLoading('Buffering...');
                 }
             };
             
-            // Seeking started
-            videoPlayer.onseeking = () => {
-                isSeeking = true;
-                showLoading('Seeking...');
-            };
-            
-            // Seeking ended
-            videoPlayer.onseeked = () => {
-                isSeeking = false;
-                hideLoading();
+            // Progress (buffer monitoring)
+            videoPlayer.onprogress = () => {
+                if (videoPlayer.buffered.length > 0) {
+                    const bufferedEnd = videoPlayer.buffered.end(videoPlayer.buffered.length - 1);
+                    const currentTime = videoPlayer.currentTime;
+                    const bufferAhead = bufferedEnd - currentTime;
+                    
+                    console.log(`Buffer: ${bufferAhead.toFixed(1)}s ahead`);
+                    
+                    // If we have good buffer, hide loading
+                    if (bufferAhead > 10) {
+                        hideLoading();
+                    }
+                }
             };
             
             // Error handling
             videoPlayer.onerror = (e) => {
-                console.error('Video error:', videoPlayer.error);
+                console.error('❌ Video error:', videoPlayer.error);
                 
-                if (retryCount < MAX_RETRIES) {
-                    retryCount++;
-                    console.log(`Retry ${retryCount}/${MAX_RETRIES}`);
-                    
-                    // Try next stream URL
-                    const nextUrl = getNextStreamUrl();
-                    if (nextUrl) {
-                        showLoading(`Trying stream ${currentStreamIndex + 1}/${STREAM_PRIORITY.length}...`);
-                        setTimeout(() => {
-                            videoPlayer.src = nextUrl;
-                            videoPlayer.load();
-                        }, 1000);
-                    } else {
-                        showStreamError();
+                let errorMsg = 'Failed to load video. ';
+                
+                if (videoPlayer.error) {
+                    switch(videoPlayer.error.code) {
+                        case 1:
+                            errorMsg = 'Video was aborted.';
+                            break;
+                        case 2:
+                            errorMsg = 'Network error. Please check your connection.';
+                            break;
+                        case 3:
+                            errorMsg = 'Video decoding failed.';
+                            break;
+                        case 4:
+                            errorMsg = 'Video format not supported.';
+                            break;
                     }
-                } else {
-                    showStreamError();
                 }
-            };
-            
-            // Time update for progress tracking
-            videoPlayer.ontimeupdate = () => {
-                // Calculate buffer percentage
-                if (videoPlayer.buffered.length > 0) {
-                    const bufferedEnd = videoPlayer.buffered.end(videoPlayer.buffered.length - 1);
-                    const duration = videoPlayer.duration;
+                
+                // If current method failed, try next one
+                if (currentStreamIndex < STREAM_METHODS.length - 1) {
+                    currentStreamIndex++;
+                    console.log(`Trying next method: ${STREAM_METHODS[currentStreamIndex].name}`);
                     
-                    if (duration > 0) {
-                        const bufferedPercent = (bufferedEnd / duration) * 100;
-                        
-                        // If buffer is low, show loading
-                        if (bufferedPercent < 10 && !isSeeking) {
-                            showLoading('Buffering...');
-                        }
-                    }
+                    showLoading(`Trying ${STREAM_METHODS[currentStreamIndex].name}...`);
+                    
+                    setTimeout(() => {
+                        loadVideo();
+                    }, 1000);
+                } else {
+                    showError(
+                        'All streaming methods failed',
+                        `${errorMsg}\n\nPossible issues:\n• Video is private\n• File format not supported\n• Network issue\n• Try opening in a browser first`
+                    );
                 }
             };
         }
         
         function loadVideo() {
-            showLoading('Initializing stream...');
+            if (currentStreamIndex >= STREAM_METHODS.length) {
+                currentStreamIndex = 0;
+            }
+            
+            const method = STREAM_METHODS[currentStreamIndex];
+            const streamUrl = method.getUrl(currentFileId);
+            
+            console.log(`🔄 Loading: ${method.name}`);
+            console.log(`🔗 URL: ${streamUrl}`);
+            
+            showLoading(`Loading ${method.name}...`);
             hideError();
             
-            const streamUrl = getCurrentStreamUrl();
-            console.log('Loading URL:', streamUrl);
+            // IMPORTANT: Clear previous source and add cache busting
+            videoPlayer.src = '';
+            videoPlayer.load();
             
-            // Add cache-busting parameter to avoid cached errors
+            // Add timestamp to prevent caching issues
             const timestamp = new Date().getTime();
             const finalUrl = `${streamUrl}&_=${timestamp}`;
             
+            // Set new source
             videoPlayer.src = finalUrl;
+            
+            // Load the video
             videoPlayer.load();
             
-            // Set timeout for initial load
+            // Set timeout for loading
             setTimeout(() => {
-                if (videoPlayer.readyState < 2) { // Not loaded enough
-                    console.log('Initial load timeout, trying next stream...');
-                    const nextUrl = getNextStreamUrl();
-                    if (nextUrl) {
-                        videoPlayer.src = nextUrl;
-                        videoPlayer.load();
+                if (videoPlayer.readyState < 2) {
+                    console.log('⏰ Load timeout, trying next method');
+                    if (currentStreamIndex < STREAM_METHODS.length - 1) {
+                        currentStreamIndex++;
+                        loadVideo();
                     }
                 }
-            }, 8000); // 8 second timeout
+            }, 10000);
         }
         
-        function showStreamError() {
-            const error = videoPlayer.error;
-            let message = 'Failed to load video. ';
-            let title = 'Stream Error';
-            
-            if (error) {
-                switch(error.code) {
-                    case 1:
-                        message += 'Video was aborted.';
-                        break;
-                    case 2:
-                        message += 'Network error. Please check your connection.';
-                        title = 'Network Error';
-                        break;
-                    case 3:
-                        message += 'Video format not supported.';
-                        title = 'Format Error';
-                        break;
-                    case 4:
-                        message += 'Video not accessible. It might be private or deleted.';
-                        title = 'Access Denied';
-                        break;
-                    default:
-                        message += 'Unknown error.';
-                }
+        function tryAlternativeStream() {
+            hideError();
+            if (currentStreamIndex < STREAM_METHODS.length - 1) {
+                currentStreamIndex++;
+                loadVideo();
             } else {
-                message += 'All streaming methods failed.';
+                currentStreamIndex = 0;
+                loadVideo();
             }
-            
-            message += '\n\nPossible solutions:\n1. Check internet connection\n2. Try different stream quality\n3. Video might be private';
-            
-            showError(message, title);
         }
         
-        // ==============================
+        // ============================================
         // UI FUNCTIONS
-        // ==============================
+        // ============================================
         
         function showLoading(text) {
             loadingText.textContent = text;
-            loading.style.display = 'block';
+            loadingOverlay.style.display = 'flex';
         }
         
         function hideLoading() {
-            loading.style.display = 'none';
+            loadingOverlay.style.display = 'none';
         }
         
-        function showError(message, title = 'Error') {
+        function showError(title, message) {
             errorTitle.textContent = title;
-            errorText.textContent = message;
-            errorBox.style.display = 'block';
+            errorMessage.textContent = message;
+            errorOverlay.style.display = 'flex';
             hideLoading();
         }
         
         function hideError() {
-            errorBox.style.display = 'none';
-        }
-        
-        function retryPlayback() {
-            hideError();
-            currentStreamIndex = 0;
-            retryCount = 0;
-            loadVideo();
-        }
-        
-        function tryDifferentStream() {
-            hideError();
-            const nextUrl = getNextStreamUrl();
-            if (nextUrl) {
-                showLoading('Switching stream...');
-                videoPlayer.src = nextUrl;
-                videoPlayer.load();
-            } else {
-                showError('No more streams to try.', 'Stream Limit');
-            }
-        }
-        
-        function toggleQuality() {
-            tg.showAlert(`Current stream: ${STREAM_PRIORITY[currentStreamIndex]}\n\nAvailable streams:\n${STREAM_PRIORITY.join('\n')}`);
-        }
-        
-        function prevEpisode() {
-            tg.showAlert('Previous episode feature coming soon!');
-        }
-        
-        function nextEpisode() {
-            tg.showAlert('Next episode feature coming soon!');
+            errorOverlay.style.display = 'none';
         }
         
         function goBack() {
             tg.close();
         }
         
-        // ==============================
+        // ============================================
         // KEYBOARD SHORTCUTS
-        // ==============================
+        // ============================================
         
         document.addEventListener('keydown', (e) => {
             switch(e.key.toLowerCase()) {
@@ -558,30 +542,28 @@
                         document.exitFullscreen();
                     }
                     break;
-                    
-                case 'm':
-                    videoPlayer.muted = !videoPlayer.muted;
-                    break;
             }
         });
         
-        // ==============================
+        // ============================================
         // INITIALIZE
-        // ==============================
+        // ============================================
         
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('Player initialized');
-            console.log('File ID:', fileId);
+            console.log('🎬 Drama Player Initialized');
             
-            // Start playback
-            initVideoPlayer();
+            // Check if API key is set
+            if (!GOOGLE_DRIVE_API_KEY || GOOGLE_DRIVE_API_KEY.includes('AIzaSyC-ZD6viBW3wT8uKy58bLClQHISnYkD8-M')) {
+                console.warn('⚠️ Please set your Google Drive API Key');
+                showError(
+                    'API Key Required',
+                    'Please set your Google Drive API Key in the script.\n\nGet it from: https://console.cloud.google.com/apis/credentials'
+                );
+            } else {
+                initPlayer();
+            }
             
-            // Show stream info
-            setTimeout(() => {
-                console.log('Using stream:', STREAM_PRIORITY[currentStreamIndex]);
-            }, 1000);
-            
-            // Page visibility handling
+            // Handle page visibility
             document.addEventListener('visibilitychange', () => {
                 if (document.hidden && !videoPlayer.paused) {
                     videoPlayer.pause();
@@ -589,7 +571,7 @@
             });
         });
         
-        // Cleanup on unload
+        // Cleanup
         window.addEventListener('beforeunload', () => {
             videoPlayer.pause();
             videoPlayer.src = '';
